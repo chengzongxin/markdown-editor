@@ -80,33 +80,76 @@ export default {
       fetch(imageUrl)
         .then((response) => response.blob())
         .then((blob) => {
-          // 创建 FormData 对象，并将文件对象添加到其中
-          const formData = new FormData();
-          formData.append("file", blob, "image.png");
-
-          // 发送 FormData 对象到服务器 http://192.168.16.50:9090/uploadoss
-          fetch("http://192.168.16.50:9090/upload/images", {
-            method: "POST",
-            body: formData,
-          })
-            .then((response) => response.json())
-            .then((data) => {
-              // 获取上传后的图片链接
-              const uploadedImageUrl = data.data;
-              // 将上传后的图片链接插入到输入区域中
-              const startPos = this.$refs.textarea.selectionStart;
-              const endPos = this.$refs.textarea.selectionEnd;
-              this.markdownText =
-                this.markdownText.slice(0, startPos) +
-                `![Pasted Image](${uploadedImageUrl})` +
-                this.markdownText.slice(endPos);
-            })
-            .catch((error) => {
-              console.error("Failed to upload image:", error);
-            });
+          // 压缩图片
+          return this.compressBlob(blob);
+        })
+        .then((compressedBlob) => {
+          // 上传压缩后的图片
+          this.uploadImage(compressedBlob);
         })
         .catch((error) => {
           console.error("Failed to convert image:", error);
+        });
+    },
+    // 压缩 Blob 文件
+    compressBlob(blob) {
+      return new Promise((resolve) => {
+        const img = new Image();
+        img.onload = () => {
+          const canvas = document.createElement("canvas");
+          const ctx = canvas.getContext("2d");
+          const maxSize = 1000; // 设置最大尺寸为 500x500 像素
+          let width = img.width;
+          let height = img.height;
+          if (width > height) {
+            if (width > maxSize) {
+              height *= maxSize / width;
+              width = maxSize;
+            }
+          } else {
+            if (height > maxSize) {
+              width *= maxSize / height;
+              height = maxSize;
+            }
+          }
+          canvas.width = width;
+          canvas.height = height;
+          ctx.drawImage(img, 0, 0, width, height);
+          canvas.toBlob(
+            (compressedBlob) => {
+              resolve(compressedBlob);
+            },
+            "image/jpeg",
+            0.8
+          ); // 压缩质量为 80%
+        };
+        img.src = URL.createObjectURL(blob);
+      });
+    },
+    uploadImage(blob) {
+      // 创建 FormData 对象，并将文件对象添加到其中
+      const formData = new FormData();
+      formData.append("file", blob, "image.png");
+
+      // 发送 FormData 对象到服务器 http://192.168.16.50:9090/uploadoss
+      fetch("http://192.168.16.50:9090/upload/images", {
+        method: "POST",
+        body: formData,
+      })
+        .then((response) => response.json())
+        .then((data) => {
+          // 获取上传后的图片链接
+          const uploadedImageUrl = data.data;
+          // 将上传后的图片链接插入到输入区域中
+          const startPos = this.$refs.textarea.selectionStart;
+          const endPos = this.$refs.textarea.selectionEnd;
+          this.markdownText =
+            this.markdownText.slice(0, startPos) +
+            `![Pasted Image](${uploadedImageUrl})` +
+            this.markdownText.slice(endPos);
+        })
+        .catch((error) => {
+          console.error("Failed to upload image:", error);
         });
     },
     insertImage(file) {
