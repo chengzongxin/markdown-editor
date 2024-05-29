@@ -27,6 +27,7 @@
         <div class="preview-content" v-html="compiledMarkdown"></div>
       </div>
     </div>
+    <button class="submit-button" @click="submitContent">Submit</button>
   </div>
 </template>
 
@@ -195,6 +196,36 @@ export default {
     togglePreview() {
       this.previewVisible = !this.previewVisible;
     },
+    submitContent() {
+      // 提交内容给后台服务器
+      const token =
+        "eyJhbGciOiJIUzI1NiJ9.eyJwYXNzd29yZCI6IjEyMzQ1NiIsImlkIjoxLCJ1c2VybmFtZSI6ImppbnlvbmciLCJleHAiOjE3MTY5OTAzNDR9.xZZADcsB1lF9Jg128zOBZ3KmRJGsax0p2otzrJEr_s0";
+      fetch("http://192.168.16.50:9090/dynamic/insert", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          token,
+        },
+        body: JSON.stringify({
+          content: this.markdownText,
+        }),
+      })
+        .then((response) => {
+          if (response.ok) {
+            // 提交成功的处理逻辑
+            console.log("Content submitted successfully.");
+            alert("Content submitted successfully.");
+          } else {
+            // 提交失败的处理逻辑
+            console.error("Failed to submit content:", response.statusText);
+            alert("Failed to submit content:", response.statusText);
+          }
+        })
+        .catch((error) => {
+          console.error("Failed to submit content:", error);
+          alert("Failed to submit content:", error);
+        });
+    },
   },
 };
 </script>
@@ -288,5 +319,20 @@ export default {
   overflow-x: auto;
   padding: 0.5em;
   background: #f0f0f0;
+}
+.submit-button {
+  padding: 12px 24px;
+  background-color: #6c757d;
+  color: #fff;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 16px;
+  font-weight: bold;
+  transition: background-color 0.3s ease;
+}
+
+.submit-button:hover {
+  background-color: #5a6268;
 }
 </style>
