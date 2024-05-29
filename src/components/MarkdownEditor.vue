@@ -56,16 +56,58 @@ export default {
   },
   methods: {
     handlePaste(event) {
-      console.log(event);
-      const items = (event.clipboardData || event.originalEvent.clipboardData)
-        .items;
+      const clipboardData = event.clipboardData || window.clipboardData;
+      const items = clipboardData.items;
+
       for (let i = 0; i < items.length; i++) {
         const item = items[i];
         if (item.kind === "file" && item.type.indexOf("image") !== -1) {
-          const file = item.getAsFile();
-          this.insertImage(file);
+          const blob = item.getAsFile();
+          const reader = new FileReader();
+          reader.onload = (event) => {
+            const imageUrl = event.target.result;
+            this.convertAndUploadImage(imageUrl);
+          };
+          reader.readAsDataURL(blob);
+          // 阻止默认粘贴行为
+          event.preventDefault();
+          return;
         }
       }
+    },
+    convertAndUploadImage(imageUrl) {
+      // 将 Base64 格式的图片转换为二进制数据
+      fetch(imageUrl)
+        .then((response) => response.blob())
+        .then((blob) => {
+          // 创建 FormData 对象，并将文件对象添加到其中
+          const formData = new FormData();
+          formData.append("file", blob, "image.png");
+
+          // 发送 FormData 对象到服务器 http://192.168.16.50:9090/uploadoss
+          fetch("http://192.168.16.50:9090/upload/images", {
+            method: "POST",
+            body: formData,
+          })
+            .then((response) => response.json())
+            .then((data) => {
+              // 获取上传后的图片链接
+              const uploadedImageUrl = data.data;
+              // 将上传后的图片链接插入到输入区域中
+              const startPos = this.$refs.textarea.selectionStart;
+              const endPos = this.$refs.textarea.selectionEnd;
+              this.markdownText =
+                this.markdownText.slice(0, startPos) +
+                `![Pasted Image](${uploadedImageUrl})` +
+                this.markdownText.slice(endPos);
+            })
+            .catch((error) => {
+              console.error("Failed to upload image:", error);
+            });
+        })
+        .catch((error) => {
+          console.error("Failed to convert image:", error);
+        });
     },
     insertImage(file) {
       const reader = new FileReader();
