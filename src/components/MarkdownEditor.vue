@@ -24,7 +24,11 @@
         v-on:paste="handlePaste"
       ></textarea>
       <div v-if="previewVisible" class="preview markdown-body">
-        <div class="preview-content" v-html="compiledMarkdown"></div>
+        <div
+          class="preview-content"
+          v-highlight
+          v-html="compiledMarkdown"
+        ></div>
       </div>
     </div>
     <button class="submit-button" @click="submitContent">Submit</button>
