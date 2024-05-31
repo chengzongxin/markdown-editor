@@ -31,20 +31,24 @@
         ></div>
       </div>
     </div>
-    <button class="submit-button" @click="submitContent">Submit</button>
+    <button class="submit-button" @click="updateContent">Submit</button>
   </div>
 </template>
 
 <script>
 import { marked } from "marked";
 import hljs from "highlight.js";
+import axios from "axios";
 console.log("hljs", hljs);
 
 export default {
   data() {
     return {
+      token:
+        "eyJhbGciOiJIUzI1NiJ9.eyJwYXNzd29yZCI6IjEyMzQ1NiIsImlkIjoxLCJ1c2VybmFtZSI6ImppbnlvbmciLCJleHAiOjE3MTcxNzAwMTJ9.gCItpJk5LmO6t2eUlddqkHsw9edMfn6US3Y9nmCAL-g",
       markdownText: "",
       previewVisible: true,
+      dynamic: {},
     };
   },
   computed: {
@@ -59,7 +63,44 @@ export default {
       });
     },
   },
+  mounted() {
+    this.fetchBlogs();
+  },
   methods: {
+    async fetchBlogs() {
+      // fetch("http://192.168.16.50:9090/dynamic/list", {
+      //   method: "GET",
+      //   headers: {
+      //     "Content-Type": "application/json",
+      //     token: this.token,
+      //   },
+      // })
+      //   .then((response) => {
+      //     console.log("response", response);
+      //     this.dynamic = response.data;
+      //   })
+      //   .catch((error) => {
+      //     console.error("Failed to submit content:", error);
+      //   });
+
+      try {
+        const response = await axios.get(
+          "http://192.168.16.50:9090/dynamic/list",
+          {
+            headers: {
+              token:
+                "eyJhbGciOiJIUzI1NiJ9.eyJwYXNzd29yZCI6IjEyMzQ1NiIsImlkIjoxLCJ1c2VybmFtZSI6ImppbnlvbmciLCJleHAiOjE3MTcxNzAwMTJ9.gCItpJk5LmO6t2eUlddqkHsw9edMfn6US3Y9nmCAL-g",
+            },
+          }
+        );
+        // this.blogs = response.data;
+        this.dynamic = response.data.data.at(-1);
+        console.log("dynamic", this.dynamic);
+        this.markdownText = this.dynamic.content;
+      } catch (error) {
+        console.error("获取博客列表失败:", error);
+      }
+    },
     handlePaste(event) {
       const clipboardData = event.clipboardData || window.clipboardData;
       const items = clipboardData.items;
@@ -202,13 +243,12 @@ export default {
     },
     submitContent() {
       // 提交内容给后台服务器
-      const token =
-        "eyJhbGciOiJIUzI1NiJ9.eyJwYXNzd29yZCI6IjEyMzQ1NiIsImlkIjoxLCJ1c2VybmFtZSI6ImppbnlvbmciLCJleHAiOjE3MTY5OTAzNDR9.xZZADcsB1lF9Jg128zOBZ3KmRJGsax0p2otzrJEr_s0";
+
       fetch("http://192.168.16.50:9090/dynamic/insert", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          token,
+          token: this.token,
         },
         body: JSON.stringify({
           content: this.markdownText,
@@ -229,6 +269,27 @@ export default {
           console.error("Failed to submit content:", error);
           alert("Failed to submit content:", error);
         });
+    },
+    async updateContent() {
+      try {
+        await axios.post(
+          "http://192.168.16.50:9090/dynamic/update",
+          {
+            id: this.dynamic.id,
+            content: this.markdownText,
+          },
+          {
+            headers: {
+              "Content-Type": "application/json",
+              token: this.token,
+            },
+          }
+        );
+
+        // 更新本地博客列表中的内容
+      } catch (error) {
+        console.error("更新博客失败:", error);
+      }
     },
   },
 };
